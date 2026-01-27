@@ -1,0 +1,10 @@
+**/target/
+**/.metals/
+**/.bsp/
+**/.idea/
+**/.vscode/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/.python-version
+.DS_Store
