@@ -8,3 +8,6 @@
 **/.venv/
 **/.python-version
 .DS_Store
+*/data
+data/
+*.env
