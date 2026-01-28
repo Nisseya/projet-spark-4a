@@ -3,12 +3,13 @@ ThisBuild / version := "0.1.0"
 ThisBuild / organization := "com.esgi"
 ThisBuild / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.Flat
 
-
 lazy val root = (project in file("."))
   .settings(
     name := "spark-scala",
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql" % "3.5.6"
+      "org.apache.spark" %% "spark-core" % "3.5.6",
+      "org.apache.spark" %% "spark-sql"  % "3.5.6",
+      "software.amazon.awssdk" % "s3" % "2.25.52"
     ),
     javaOptions ++= Seq(
       "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
