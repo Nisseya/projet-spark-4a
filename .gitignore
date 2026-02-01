@@ -10,4 +10,8 @@
 .DS_Store
 */data
 data/
-*.env
+
+**/drizzle
+**/.pnpm-store
+
+python/.env

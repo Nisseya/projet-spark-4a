@@ -7,4 +7,4 @@ JAR="target/scala-2.12/spark-scala_2.12-0.1.0.jar"
 export SPARK_LOCAL_IP=127.0.0.1
 
 sbt clean package
-"$SPARK/bin/spark-submit" --class Main "$JAR"
+"$SPARK/bin/spark-submit" --class app.Main "$JAR"
