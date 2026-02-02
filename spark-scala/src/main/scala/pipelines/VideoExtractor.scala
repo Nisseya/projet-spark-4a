@@ -1,6 +1,0 @@
-package pipelines
-
-object VideoExtractor {
-
-
-}

@@ -1,33 +1,52 @@
 services:
-  # -------------------- Storage (same as prod) -------------------- #
+    rustfs:
+        image: rustfs/rustfs:latest
+        container_name: asl-store
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        environment:
+            RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
+            RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
+            RUSTFS_CONSOLE_ENABLE: "true"
+        volumes:
+            - rustfs_data:/data
+        restart: unless-stopped
 
-  rustfs:
-    image: rustfs/rustfs:latest
-    container_name: asl-store
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
-      RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
-      RUSTFS_CONSOLE_ENABLE: "true"
-    volumes:
-      - rustfs_data:/data
-    restart: unless-stopped
+    rustfs-init:
+        image: amazon/aws-cli:latest
+        depends_on:
+            - rustfs
+        environment:
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
+            AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+            AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+        volumes:
+            - ./rustfs/scripts/rustfs-init.sh:/usr/local/bin/rustfs-init.sh:ro
+        entrypoint: ["/bin/sh", "/usr/local/bin/rustfs-init.sh"]
+        restart: "no"
 
-  rustfs-init:
-    image: amazon/aws-cli:latest
-    depends_on:
-      - rustfs
-    environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-    volumes:
-      - ./rustfs/scripts/rustfs-init.sh:/usr/local/bin/rustfs-init.sh:ro
-    entrypoint: ["/bin/sh", "/usr/local/bin/rustfs-init.sh"]
-    restart: "no"
+    postgres:
+        image: postgres:16-alpine
+        container_name: asl-db
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        volumes:
+            - pg_data:/var/lib/postgresql/data
+            - ./postgres/init:/docker-entrypoint-initdb.d:ro
+        healthcheck:
+            test:
+                ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+        restart: unless-stopped
 
 volumes:
-  rustfs_data:
+    rustfs_data:
+    pg_data:
