@@ -15,6 +15,8 @@ lazy val root = (project in file("."))
       "software.amazon.awssdk" % "s3" % awsSdkVersion,
       "io.github.cdimascio" % "dotenv-java" % "3.0.0",
       "org.postgresql" % "postgresql" % "42.7.4",
+      "org.apache.hadoop" % "hadoop-aws" % "3.3.6"
+
     ),
     Compile / run / fork := true,
     javaOptions ++= Seq(

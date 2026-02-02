@@ -23,9 +23,11 @@ class ExtractWorker(fps: Int = 5) {
           try {
             println(video_id)
             this.process(video_id)
+            this.db.set_extraction_success(video_id = video_id)
           }
           catch {
             case e: Throwable =>
+              this.db.set_failure(video_id = video_id, error = e)
               println(e.getMessage)
               Thread.sleep(10000)
           }
@@ -44,7 +46,7 @@ class ExtractWorker(fps: Int = 5) {
     } finally {
       video_in.close()
     }
-    
+
     this.db.set_processing_success(video_id)
   }
 
