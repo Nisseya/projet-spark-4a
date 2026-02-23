@@ -1,5 +1,7 @@
 package workers
 
+// this worker is from picking images and put them into parquet files that are the same as the training material
+
 import lib.{Database, Env}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.functions._

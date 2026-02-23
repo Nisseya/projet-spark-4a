@@ -5,6 +5,8 @@ import lib.RustFs
 import software.amazon.awssdk.core.ResponseInputStream
 import software.amazon.awssdk.services.s3.model.GetObjectResponse
 
+import java.sql.{Connection, DriverManager}
+
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
@@ -12,7 +14,6 @@ import scala.jdk.CollectionConverters.asScalaIteratorConverter
 class ExtractWorker(fps: Int = 5) {
   private val db = new Database()
   private val object_store = new RustFs()
-
 
   def run():Unit= {
     while (true) {
@@ -38,8 +39,13 @@ class ExtractWorker(fps: Int = 5) {
   private def process(video_id: String): Unit={
     val outDir = Paths.get(s"/tmp/extract/$video_id")
     Files.createDirectories(outDir)
+    val video_key: String = this.db.getVideoKey(video_id) match {
+      case Some(key) => key
+      case None =>
+        throw new RuntimeException(s"Video $video_id not found")
+    }
 
-    val video_in: ResponseInputStream[GetObjectResponse] = this.object_store.get_raw_video_stream(video_id)
+    val video_in: ResponseInputStream[GetObjectResponse] = this.object_store.get_raw_video_stream(video_key)
     try {
       val n = extract_images_ffmpeg(video_in, outDir, fps = this.fps)
       println(s"Extracted $n frames into $outDir")

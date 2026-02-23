@@ -6,8 +6,8 @@ services:
             - "9000:9000"
             - "9001:9001"
         environment:
-            RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
-            RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
+            RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID}
+            RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY}
             RUSTFS_CONSOLE_ENABLE: "true"
         volumes:
             - rustfs_data:/data
@@ -18,8 +18,8 @@ services:
         depends_on:
             - rustfs
         environment:
-            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-rustfsadmin}
-            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-rustfsadmin}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
             AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
             AWS_S3_BUCKET: ${AWS_S3_BUCKET}
         volumes:
