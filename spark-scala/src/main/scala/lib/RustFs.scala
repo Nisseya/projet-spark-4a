@@ -10,7 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.core.ResponseInputStream
 import java.net.URI
 import java.time.Duration
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 final class RustFs {
 

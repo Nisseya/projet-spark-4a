@@ -13,11 +13,9 @@ create table if not exists videos (
 
   status text not null
     check (status in (
-      'UPLOAD_STARTED',
       'UPLOAD_COMPLETE',
-      'PROCESSING_COMPLETE',
-      'EXTRACTION_COMPLETE',
-      'RUNNING_INFER',
+      'EXTRACTING',
+      'PROCESSING',
       'DONE',
       'FAILED'
     )),
@@ -31,4 +29,5 @@ create table if not exists videos (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_videos_video_id on videos(id);
+create index if not exists idx_videos_status_created_at on videos(status, created_at);
+create index if not exists idx_videos_status_updated_at on videos(status, updated_at);
