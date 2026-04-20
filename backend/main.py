@@ -106,6 +106,46 @@ async def admin_run(kind: str):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+
 @app.get("/api/admin/status")
 def admin_status():
     return {"running": running_jobs()}
+
+
+@app.get("/api/pipeline/status-distribution")
+def pipeline_status_distribution():
+    """Nombre de vidéos par statut, pour le donut chart."""
+    from db import conn
+    with conn() as c, c.cursor() as cur:
+        cur.execute("""
+            SELECT status, COUNT(*) AS n
+              FROM videos
+             GROUP BY status
+        """)
+        rows = cur.fetchall()
+    return {r["status"]: r["n"] for r in rows}
+
+
+@app.get("/api/pipeline/timeline")
+def pipeline_timeline():
+    """Vidéos créées par jour sur les 30 derniers jours."""
+    from db import conn
+    with conn() as c, c.cursor() as cur:
+        cur.execute("""
+            WITH days AS (
+              SELECT generate_series(
+                (now() - interval '29 days')::date,
+                now()::date,
+                '1 day'::interval
+              )::date AS day
+            )
+            SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
+                   COALESCE(COUNT(v.id), 0)::int AS count
+              FROM days d
+              LEFT JOIN videos v
+                ON v.created_at::date = d.day
+             GROUP BY d.day
+             ORDER BY d.day
+        """)
+        rows = cur.fetchall()
+    return [{"date": r["date"], "count": r["count"]} for r in rows]

@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiUrl, fetchJsonl } from "@/lib/api";
 import StatCard from "@/components/stat-card";
+import LetterTimeline from "@/components/letter-timeline";
+import DonutChart from "@/components/donut-chart";
+import LetterBars from "@/components/letter-bars";
 
 type Annotation = { frame_idx: number; ts_ms: number; translation: string };
 
@@ -20,7 +23,7 @@ export default function VideoPage({ params }: { params: { id: string } }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [video, setVideo] = useState<VideoRow | null>(null);
   const [anns, setAnns] = useState<Annotation[]>([]);
-  const [currentIdx, setCurrentIdx] = useState<number>(-1);
+  const [currentMs, setCurrentMs] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +35,6 @@ export default function VideoPage({ params }: { params: { id: string } }) {
           return r.json();
         });
         setVideo(v);
-
         if (v.annotations_url) {
           const a = await fetchJsonl<Annotation>(v.annotations_url);
           a.sort((x, y) => x.ts_ms - y.ts_ms);
@@ -48,21 +50,20 @@ export default function VideoPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || anns.length === 0) return;
-
-    const onTime = () => {
-      const t = el.currentTime * 1000;
-      let idx = -1;
-      for (let i = 0; i < anns.length; i++) {
-        if (anns[i].ts_ms <= t) idx = i;
-        else break;
-      }
-      setCurrentIdx(idx);
-    };
-
+    if (!el) return;
+    const onTime = () => setCurrentMs(el.currentTime * 1000);
     el.addEventListener("timeupdate", onTime);
     return () => el.removeEventListener("timeupdate", onTime);
   }, [anns]);
+
+  const currentIdx = useMemo(() => {
+    let idx = -1;
+    for (let i = 0; i < anns.length; i++) {
+      if (anns[i].ts_ms <= currentMs) idx = i;
+      else break;
+    }
+    return idx;
+  }, [currentMs, anns]);
 
   const currentLetter = currentIdx >= 0 ? anns[currentIdx].translation : "–";
 
@@ -90,16 +91,40 @@ export default function VideoPage({ params }: { params: { id: string } }) {
     return letters.join("");
   }, [anns]);
 
-  const distribution = useMemo(() => {
+  const distributionArr = useMemo(() => {
     const d: Record<string, number> = {};
     for (const a of anns) d[a.translation] = (d[a.translation] ?? 0) + 1;
     return Object.entries(d).sort((a, b) => b[1] - a[1]);
   }, [anns]);
 
+  const donutSlices = useMemo(
+    () =>
+      distributionArr
+        .filter(([k]) => k !== "undefined")
+        .slice(0, 8)
+        .map(([name, value]) => ({ name, value: Number(value) })),
+    [distributionArr]
+  );
+
+  const barData = useMemo(
+    () =>
+      distributionArr
+        .filter(([k]) => k !== "undefined")
+        .map(([letter, count]) => ({ letter, count: Number(count) })),
+    [distributionArr]
+  );
+
   const durationMs = anns.length ? anns[anns.length - 1].ts_ms : 0;
   const distinctLetters = new Set(
     anns.map((a) => a.translation).filter((l) => l !== "undefined")
   ).size;
+
+  function seek(ms: number) {
+    if (videoRef.current) {
+      videoRef.current.currentTime = ms / 1000;
+      videoRef.current.play().catch(() => {});
+    }
+  }
 
   if (loading) return <p className="text-sm text-zinc-500">Chargement…</p>;
   if (error || !video) {
@@ -117,6 +142,7 @@ export default function VideoPage({ params }: { params: { id: string } }) {
         <p className="mt-1 font-mono text-xs text-zinc-500">{video.id}</p>
       </div>
 
+      {/* Video + overlay */}
       <div className="relative overflow-hidden rounded-xl border border-zinc-800 bg-black">
         <video
           ref={videoRef}
@@ -130,6 +156,14 @@ export default function VideoPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      {/* Timeline - cliquable pour seek */}
+      <LetterTimeline
+        annotations={anns}
+        currentTimeMs={currentMs}
+        onSeek={seek}
+      />
+
+      {/* Mot prédit */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
         <div className="text-xs uppercase tracking-wider text-zinc-500">
           Mot en cours
@@ -145,6 +179,7 @@ export default function VideoPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Frames" value={anns.length.toLocaleString("fr-FR")} />
         <StatCard label="Durée" value={`${(durationMs / 1000).toFixed(1)} s`} />
@@ -159,28 +194,28 @@ export default function VideoPage({ params }: { params: { id: string } }) {
         />
       </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-zinc-500">
-          Distribution
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {distribution.map(([letter, count]) => (
-            <span
-              key={letter}
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-sm"
-            >
-              <span
-                className={`font-mono ${
-                  letter === "undefined" ? "text-zinc-500" : "text-indigo-400"
-                }`}
-              >
-                {letter}
-              </span>
-              <span className="font-mono text-xs text-zinc-500">{count}</span>
-            </span>
-          ))}
+      {/* Distribution : donut + bar côte à côte */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          {donutSlices.length > 0 && (
+            <DonutChart
+              title="Répartition (top 8)"
+              data={donutSlices}
+              centerLabel="Frames"
+              centerValue={anns.length}
+            />
+          )}
         </div>
-      </section>
+        <div className="lg:col-span-2">
+          {barData.length > 0 && (
+            <LetterBars
+              title="Distribution complète"
+              data={barData}
+              highlight={barData[0]?.letter}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
